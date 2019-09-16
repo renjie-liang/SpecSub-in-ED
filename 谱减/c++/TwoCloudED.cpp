@@ -46,6 +46,8 @@ void TwoCloudSolution::divide(mpz_t out,const mpz_t c_m1,const mpz_t c_m2,
 	mpz_inits(s,temp1,temp2,NULL);
 
 	//若未给定r值,则默认m2<n^0.5,随机生成r
+
+	
 	if(r==NULL){
 		r=temp2;
 		mpz_urandomb(r,state,modLength/2);

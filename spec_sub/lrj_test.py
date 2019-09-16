@@ -35,7 +35,7 @@ class SpecSubED():
 
         sptrRe, sptrIm = self.enframed_windowed_dft(signal_in)
 
-        self.sptr_sub(sptrRe,sptrIm)
+        sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm)
         outSignal = overlap_add(sptrRe,sptrIm)
         return outSignal
 
@@ -67,13 +67,34 @@ class SpecSubED():
             for j in range(self.NIS):
                 amp_avg = amp_avg[i] + amp[j][i]
 
+        for i in range(self.wlen):
+            A_amp = self.A * amp_avg[i]
+            B_amp = self.B * amp_avg[i]
+
+            for j in range(self.Num_w):
+                
+                x = self.Q * amp[j][i] - A_amp
+                x = self.big(x, B_amp)
+
+                x = self.div(x, amp[j][i])
+                x = self.sqrt(x)
+                sptrRe[j][i] = self.mul(sptrRe[j][i], x)
+                sptrIm[j][i] = self.mul(sptrIm[j][i], x)
+        return sptrRe, sptrIm
+
         
 
-    def overlap_add():
-        pass
+    def overlap_add(self, sptrRe, sptrIm):
+        outSignal = []
 
-    def DFT(self, signal_in):
-        len_s = len(signal_in)
+        for i in range(self.Num_w):
+                DFT(sptrRe, sptrIm)
+
+        return outSignal
+        
+
+    def DFT(self, re_in, img_in = None):
+        len_s = len(re_in)
         p = (-2 * math.pi) / len_s
 
         aux_re, aux_im = [], [] # Q
@@ -91,10 +112,20 @@ class SpecSubED():
         re, im = [0] * len_s, [0] * len_s
         for i in range(len_s):
             for j in range(len_s):
-                x = signal_in[j] * aux_re[i][j] # QQ
+                x = re_in[j] * aux_re[i][j] # QQ
                 re[i] = re[i] + x
-                y = signal_in[j] * aux_im[i][j] # QQ
+                y = re_in[j] * aux_im[i][j] # QQ
                 im[i] = im[i] + y
+
+
+        if img_in:
+            for i in range(len_s):
+                for j in range(len_s):
+                    x = -1 * aux_re[i][j] * img_in[j] # QQ
+                    re[i] = re[i] + x
+                    y = -1 * aux_im[i][j] * img_in[j] # QQ
+                    im[i] = im[i] + y
+
 
         return re, im
 
