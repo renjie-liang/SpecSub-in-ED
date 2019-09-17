@@ -38,13 +38,6 @@ class SpecSubED():
         self.Num_w=(self.Len_message - self.wlen) // self.inc + 1
 
         sptrRe, sptrIm = self.enframed_windowed_dft(signal_in) # Q^3
-        print(sptrRe[0][0])
-        print(pvk.decrypt(sptrRe[0][0]))
-        print(pvk.decrypt(sptrRe[0][0]) / self.Q / self.Q / self.Q  )
-        print('Q: ', self.Q)
-        print('QQ: ', self.Q * self.Q)
-        print('QQQ: ', self.Q * self.Q * self.Q)
-        input()
 
         sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm)
         outSignal = overlap_add(sptrRe,sptrIm)
