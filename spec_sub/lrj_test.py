@@ -77,14 +77,14 @@ class SpecSubED():
         for i in range(self.Num_w):
             for j in range(self.wlen):
 
-
-                print('sptrRe[i][j] = ',pvk.decrypt(sptrRe[i][j]))
-                print('sptrRe[i][j] = ',pvk.decrypt(sptrRe[i][j])/self.Q/self.Q/self.Q)
+                print('sptrRe[i][j] of ciphertext = ', sptrRe[i][j].ciphertext())
+                print('sptrRe[i][j] of plaintext = ', pvk.decrypt(sptrRe[i][j]))
+                print('sptrRe[i][j] / Q^3  of plaintext= ', pvk.decrypt(sptrRe[i][j])/self.Q/self.Q/self.Q)
                 input()
+
+
 
                 x = self.mul(sptrRe[i][j], sptrRe[i][j]) # Q^6
-                print('ccc')
-                input()
                 y = self.mul(sptrIm[i][j], sptrIm[i][j]) # Q^6
                 amp[i][j] = x + y  
 
@@ -182,14 +182,6 @@ if __name__=='__main__':
     pbk=ft.cloud.pbk
     pvk=ft.cloud.get_privatekey()
 
-    Q3_p = -q * q *q
-    Q3_c = pbk.encrypt(Q3_p)
-
-    print('Q3_p:', Q3_p)
-    input()
-    res = ft.cloud.multiply(Q3_c , Q3_c)
-    print('res = ', pvk.decrypt(res))
-    input()
 
     noise,sigin=[],[]
     # f = open('./data/noise.txt', 'r')

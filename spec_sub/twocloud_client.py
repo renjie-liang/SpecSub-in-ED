@@ -28,6 +28,8 @@ class PlaintextCloud(object):
         sk.sendall('mul'.encode())
         r1 = random.SystemRandom().randrange(-self.pbk.max_int,self.pbk.max_int)
         r2 = random.SystemRandom().randrange(-self.pbk.max_int,self.pbk.max_int)
+        print('r1',r1)
+        print('c1+r1  of ciphertext= ', (c1 + r1).ciphertext() )
         sk.recv(1)
         sk.sendall(pickle.dumps(c1+r1))
         sk.recv(1)

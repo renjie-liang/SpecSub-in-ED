@@ -27,6 +27,7 @@ class PlaintextCloud(object):
         sk.connect(self.ip_port)
         sk.sendall('mul'.encode())
         r1 = random.SystemRandom().randrange(-self.pbk.max_int,self.pbk.max_int)
+
         r2 = random.SystemRandom().randrange(-self.pbk.max_int,self.pbk.max_int)
         sk.recv(1)
         sk.sendall(pickle.dumps(c1+r1))
