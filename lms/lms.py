@@ -32,6 +32,9 @@ if __name__=='__main__':
     pbk=ft.cloud.pbk
     pvk=ft.cloud.get_privatekey()
 
+
+
+
     noise,sigin=[],[]
     f = open('c:/users/hjm/desktop/noise.txt', 'r')
     for l in f:
