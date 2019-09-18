@@ -40,6 +40,7 @@ class SpecSubED():
         self.Len_message = len(signal_in)
         self.Num_w=(self.Len_message - self.wlen) // self.inc + 1
 
+        self.print_info()
         sptrRe, sptrIm = self.enframed_windowed_dft(signal_in) # Q^3
 
         sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm) # NIS^0.5 * Q^15
@@ -164,6 +165,29 @@ class SpecSubED():
             x = int(x * self.Q)
             win.append(x)
         return win # 1 * wlen int Q
+        
+    def print_info(self):
+        print()
+        print('-'*40)
+        print('Encrypted info:')
+        print('Q: ',self.Q)
+        print()
+
+        print('siginal info:')
+        print('Len_message:',self.Len_message)
+        print('inc: ',self.inc)
+        print('wlen: ',self.wlen)
+        print('Num_w: ',self.Num_w)
+        print()
+
+        print('spec sub infor')
+        print('A: ',self.A)
+        print('B: ',self.B)
+        print('NIS: ',self.NIS)
+        print('alpha_hamming: ',self.alpha_hamming)
+        print('-'*40)
+        print()
+
 
 
 
@@ -186,7 +210,6 @@ if __name__=='__main__':
         sigin.append(pbk.encrypt(int(float(l)*q)))
         print('Reading: {}|{}'.format(index,256))
     f.close()
-    print(type(sigin[0]))
     #sigin # Q
     out=ft.spec_sub(sigin)
     print("Done!")
