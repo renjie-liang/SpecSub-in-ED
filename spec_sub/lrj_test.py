@@ -1,6 +1,8 @@
 from phe import paillier
 from twocloud_client import PlaintextCloud
 import math
+import random
+import copy
 class SpecSubED():
     def __init__(self,decrypt_cloud: PlaintextCloud, 
                 inc = 160,
@@ -23,12 +25,13 @@ class SpecSubED():
 
         self.cloud=decrypt_cloud
         self.pvk = self.cloud.get_privatekey()
+        self.pbk = self.cloud.pbk
+
         self.mul_qua=self.cloud.multiply_with_quantizer
         self.mul = self.cloud.multiply
         self.div = self.cloud.divide
         self.sqrt = self.cloud.square_root
         self.big = self.cloud.bigger
-
 
 
     def spec_sub(self, signal_in, noise):
@@ -45,17 +48,17 @@ class SpecSubED():
 
     def enframed_windowed_dft(self, signal_in):
 
-        sptrRe = [[0]*self.wlen] * self.Num_w           # wlen * Num_w int 
+        sptrRe = [[]] * self.Num_w           # wlen * Num_w  
         sptrIm = [[0]*self.wlen] * self.Num_w
-        window = self.get_hamming_window(self.wlen)     #  Q
+        window = self.get_hamming_window(self.wlen)     #  Q int
 
 
         for index_w in range(self.Num_w):
             temp = [0] * self.wlen
             for j in range(self.wlen):
-                temp[j] = signal_in[index_w + j] * window[j] # Q^2
+                temp[j] = signal_in[index_w *self.wlen + j] * window[j] # Q^2
 
-            re, im = self.DFT(temp) # Q^3
+            re, im = self.DFT(temp) # Q^3 
             sptrRe[index_w] = re
             sptrIm[index_w] = im
 
@@ -69,18 +72,10 @@ class SpecSubED():
 
         for i in range(self.Num_w):
             for j in range(self.wlen):
-
-                print('sptrRe[i][j] of ciphertext = ', sptrRe[i][j].ciphertext())
-                print('sptrRe[i][j] of plaintext = ', pvk.decrypt(sptrRe[i][j]))
-                print('sptrRe[i][j] / Q^3  of plaintext= ', pvk.decrypt(sptrRe[i][j])/self.Q/self.Q/self.Q)
-                input()
-
-
-
                 x = self.mul(sptrRe[i][j], sptrRe[i][j]) # Q^6
                 y = self.mul(sptrIm[i][j], sptrIm[i][j]) # Q^6
                 amp[i][j] = x + y  
-
+                
         for i in range(self.wlen):
             for j in range(self.NIS):
                 amp_avg = amp_avg[i] + amp[j][i]
@@ -117,18 +112,17 @@ class SpecSubED():
         len_s = len(re_in)
         p = (-2 * math.pi) / len_s
 
-        aux_re, aux_im = [], [] # Q
+        aux_re, aux_im = [], [] # Q int
 
         for i in range(len_s):
             row_re, row_im = [], []
             for j in range(len_s):
-                x = math.cos(i * j * p) * self.Q
-                y = math.sin(i * j * p) * self.Q
+                x = int(math.cos(i * j * p) * self.Q)
+                y = int(math.sin(i * j * p) * self.Q)
                 row_re.append(x)
                 row_im.append(y)
             aux_re.append(row_re)
             aux_im.append(row_im) # Q
-
 
         re, im = [0] * len_s, [0] * len_s
         for i in range(len_s):
@@ -137,7 +131,7 @@ class SpecSubED():
                 re[i] = re[i] + x
                 y = re_in[j] * aux_im[i][j] 
                 im[i] = im[i] + y
-
+                break
 
         if img_in:
             for i in range(len_s):
@@ -146,8 +140,6 @@ class SpecSubED():
                     re[i] = re[i] + x
                     y = -1 * aux_im[i][j] * img_in[j] # QQ
                     im[i] = im[i] + y
-
-
         return re, im # Q^3
 
 
@@ -157,7 +149,7 @@ class SpecSubED():
         for i in range(wlen):
             x = math.cos(p * i)
             x = self.alpha_hamming * x + (1 - self.alpha_hamming)
-            x = x * self.Q
+            x = int(x * self.Q)
             win.append(x)
         return win # 1 * wlen int Q
 
@@ -174,6 +166,8 @@ if __name__=='__main__':
                 quantizer=2**32) #
     pbk=ft.cloud.pbk
     pvk=ft.cloud.get_privatekey()
+
+
 
 
     noise,sigin=[],[]

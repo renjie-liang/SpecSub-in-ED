@@ -192,7 +192,7 @@ class EncodedNumber(object):
                         * fractions.Fraction(cls.BASE) ** -exponent)
 
         if abs(int_rep) > public_key.max_int:
-            raise ValueError('Integer needs to be within +/- %d but got %d'
+            raise ValueError('Integer needs to be within +/- \n%d but got \n%d'
                              % (public_key.max_int, int_rep))
 
         # Wrap negative numbers by adding n
