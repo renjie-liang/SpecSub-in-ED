@@ -187,6 +187,7 @@ class SpecSubED():
         print('alpha_hamming: ',self.alpha_hamming)
         print('-'*40)
         print()
+        
 
 
 
