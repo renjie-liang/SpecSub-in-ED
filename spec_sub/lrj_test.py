@@ -18,8 +18,8 @@ class SpecSubED():
         self.Num_w = None
 
         self.Q=quantizer
-        self.A = a_in
-        self.B = b_in
+        self.A = int(a_in * quantizer)
+        self.B = int(b_in * quantizer)
         self.NIS = NIS
         self.alpha_hamming = 0.46
 
@@ -34,7 +34,7 @@ class SpecSubED():
         self.big = self.cloud.bigger
 
 
-    def spec_sub(self, signal_in, noise):
+    def spec_sub(self, signal_in):
 
 
         self.Len_message = len(signal_in)
@@ -42,8 +42,8 @@ class SpecSubED():
 
         sptrRe, sptrIm = self.enframed_windowed_dft(signal_in) # Q^3
 
-        sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm)
-        outSignal = overlap_add(sptrRe,sptrIm)
+        sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm) # NIS^0.5 * Q^15
+        outSignal = self.overlap_add(sptrRe,sptrIm)
         return outSignal
 
     def enframed_windowed_dft(self, signal_in):
@@ -56,54 +56,66 @@ class SpecSubED():
         for index_w in range(self.Num_w):
             temp = [0] * self.wlen
             for j in range(self.wlen):
-                temp[j] = signal_in[index_w *self.wlen + j] * window[j] # Q^2
+                temp[j] = signal_in[index_w *self.inc + j] * window[j] # Q^2
 
             re, im = self.DFT(temp) # Q^3 
             sptrRe[index_w] = re
             sptrIm[index_w] = im
+            print('Process 1 enframed windowed: {}|{}'.format(index_w,self.Num_w -1))
 
         return sptrRe, sptrIm # Q^3
 
 
 
     def sptr_sub(self, sptrRe, sptrIm):
-        amp = [[0]*self.wlen] * self.Num_w # Q^6
-        amp_avg = [0] * self.wlen
+        amp_avg = [0] * self.wlen   # Q^6
+        amp = []
 
         for i in range(self.Num_w):
+            amp_row = []
             for j in range(self.wlen):
                 x = self.mul(sptrRe[i][j], sptrRe[i][j]) # Q^6
                 y = self.mul(sptrIm[i][j], sptrIm[i][j]) # Q^6
-                amp[i][j] = x + y  
-                
-        for i in range(self.wlen):
-            for j in range(self.NIS):
-                amp_avg = amp_avg[i] + amp[j][i]
+                amp_row.append(x + y)
+            amp.append(amp_row)
+            print('Process 21 amplitude: {}|{}'.format(i,self.Num_w -1))
 
         for i in range(self.wlen):
-            A_amp = self.A * amp_avg[i]
-            B_amp = self.B * amp_avg[i]
+            for j in range(self.NIS):
+                amp_avg[i] = amp_avg[i] + amp[j][i] #  NIS * Q^6
+            print('Process 22 avg amplitude: {}|{}'.format(i,self.wlen -1))
+
+        for i in range(self.wlen):
+            A_amp = self.A * amp_avg[i] # int * EncryptedNumber # NIS * Q^7
+            B_amp = self.B * amp_avg[i] # NIS * Q^7
 
             for j in range(self.Num_w):
                 
-                x = self.Q * amp[j][i] - A_amp
+                x = self.NIS * self.Q * amp[j][i] - A_amp # NIS * Q * Q^6 - NIS * Q^7 = NIS * Q^7
                 x = self.big(x, B_amp)
 
-                x = self.div(x, amp[j][i])
-                x = self.sqrt(x)
-                sptrRe[j][i] = self.mul(sptrRe[j][i], x)
-                sptrIm[j][i] = self.mul(sptrIm[j][i], x)
+                x = self.div(x, amp[j][i], self.Q ** 7) # (NIS * Q^7) / Q^6 * Q^7 = NIS * Q^8
+                # print('x div = ', self.pvk.decrypt(x)/(self.NIS * self.Q ** 8))
+                x = self.sqrt(x, self.Q ** 5) #  NIS^0.5 * Q^9
+                # print('x sqrt = ', self.pvk.decrypt(x)/(self.NIS ** 0.5 * self.Q ** 9))
+
+                sptrRe[j][i] = self.mul(sptrRe[j][i], x) # Q^6 * NIS^0.5 * Q^9 = NIS^0.5 * Q^15
+                # print('x mul 15 = ', self.pvk.decrypt(sptrRe[j][i])/(self.NIS **0.5 * self.Q ** 15))
+                # input()
+                sptrIm[j][i] = self.mul(sptrIm[j][i], x) # NIS^0.5 * Q^15
+            print('Process 23 remove nosie: {}|{}'.format(i,self.wlen -1))
         return sptrRe, sptrIm
 
         
 
-    def overlap_add(self, sptrRe, sptrIm):
-        outSignal = [0] * self.Len_message
+    def overlap_add(self, sptrRe, sptrIm): # NIS^0.5 * Q^15
+        outSignal = [0] * self.Len_message 
 
         for i in range(self.Num_w):
-            re, im = DFT(sptrRe, sptrIm)
+            re, _ = self.DFT(sptrRe[i], sptrIm[i])
             for j in range(self.inc):
                 outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + re[j]
+            print('Process 3 overlap add: {}|{}'.format(i,self.Num_w -1))
 
         return outSignal
         
@@ -132,7 +144,6 @@ class SpecSubED():
                 y = re_in[j] * aux_im[i][j] 
                 im[i] = im[i] + y
                 break
-
         if img_in:
             for i in range(len_s):
                 for j in range(len_s):
@@ -140,6 +151,7 @@ class SpecSubED():
                     re[i] = re[i] + x
                     y = -1 * aux_im[i][j] * img_in[j] # QQ
                     im[i] = im[i] + y
+                    break
         return re, im # Q^3
 
 
@@ -162,30 +174,22 @@ if __name__=='__main__':
                 window_len=64, 
                 a_in = 4,
                 b_in = 0.001,
-                NIS = 23,
+                NIS = 2,
                 quantizer=2**32) #
     pbk=ft.cloud.pbk
     pvk=ft.cloud.get_privatekey()
 
-
-
-
-    noise,sigin=[],[]
-    # f = open('./data/noise.txt', 'r')
-    # for index, l in enumerate(f):
-    #     noise.append(pbk.encrypt(int(float(l)*q)))
-    #     print('{}|{}'.format(index,1024))
-    # f.close()
+    sigin=[]
 
     f = open('./data/lms_input.txt', 'r')
     for index, l in enumerate(f):
         sigin.append(pbk.encrypt(int(float(l)*q)))
-        print('{}|{}'.format(index,256))
+        print('Reading: {}|{}'.format(index,256))
     f.close()
-
+    print(type(sigin[0]))
     #sigin # Q
-    out,err=ft.spec_sub(sigin, noise)
-
+    out=ft.spec_sub(sigin)
+    print("Done!")
 
     # noise,sigin=[],[]
     # f = open('c:/users/hjm/desktop/noise.txt', 'r')
