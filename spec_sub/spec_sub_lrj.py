@@ -1,6 +1,7 @@
 from phe import paillier
 from twocloud_client import PlaintextCloud
 import math
+import numpy as np
 import random
 import copy
 class SpecSubED():
@@ -50,7 +51,7 @@ class SpecSubED():
     def enframed_windowed_dft(self, signal_in):
 
         sptrRe = [[]] * self.Num_w           # wlen * Num_w  
-        sptrIm = [[0]*self.wlen] * self.Num_w
+        sptrIm = [[]] * self.Num_w
         window = self.get_hamming_window(self.wlen)     #  Q int
 
 
@@ -113,8 +114,8 @@ class SpecSubED():
         outSignal = [0] * self.Len_message 
 
         for i in range(self.Num_w):
-            re, _ = self.DFT(sptrRe[i], sptrIm[i])
-            for j in range(self.inc):
+            _, re = self.DFT(sptrIm[i], sptrRe[i])
+            for j in range(self.wlen):
                 outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + re[j]
             print('Process 3 overlap add: {}|{}'.format(i,self.Num_w -1))
 
@@ -144,7 +145,6 @@ class SpecSubED():
                 re[i] = re[i] + x
                 y = re_in[j] * aux_im[i][j] 
                 im[i] = im[i] + y
-                break
         if img_in:
             for i in range(len_s):
                 for j in range(len_s):
@@ -152,7 +152,6 @@ class SpecSubED():
                     re[i] = re[i] + x
                     y = -1 * aux_im[i][j] * img_in[j] # QQ
                     im[i] = im[i] + y
-                    break
         return re, im # Q^3
 
 
@@ -181,8 +180,8 @@ class SpecSubED():
         print()
 
         print('spec sub infor')
-        print('A: ',self.A)
-        print('B: ',self.B)
+        print('A: ',self.A/self.Q)
+        print('B: ',self.B/self.Q)
         print('NIS: ',self.NIS)
         print('alpha_hamming: ',self.alpha_hamming)
         print('-'*40)
@@ -190,29 +189,37 @@ class SpecSubED():
         
 
 
-
+# hjm test git
 
 if __name__=='__main__':
     q=2**32
     ft=SpecSubED(PlaintextCloud(('127.0.0.1',9999)),
-                inc = 50    ,
-                window_len=64, 
+                inc = 160,
+                window_len=400, 
                 a_in = 4,
                 b_in = 0.001,
-                NIS = 2,
+                NIS = 23,
                 quantizer=2**32) #
     pbk=ft.cloud.pbk
     pvk=ft.cloud.get_privatekey()
 
     sigin=[]
 
-    f = open('./data/lms_input.txt', 'r')
+    f = open('./data/shortinput.txt', 'r')
     for index, l in enumerate(f):
         sigin.append(pbk.encrypt(int(float(l)*q)))
-        print('Reading: {}|{}'.format(index,256))
+        print('Reading: {}|{}'.format(index,4000))
     f.close()
     #sigin # Q
     out=ft.spec_sub(sigin)
+    sigout=[pvk.decrypt(i) for i in out]
+    sigout=sigout-np.mean(sigout)
+    sigout=sigout/max(abs(sigout))
+    f = open('./data/shortoutput.txt', 'wt')
+    for index,i in enumerate(sigout):
+        f.write(str(i)+'\n')
+        print('Storing: {}|{}'.format(index,4000))
+    f.close()
     print("Done!")
 
     # noise,sigin=[],[]
