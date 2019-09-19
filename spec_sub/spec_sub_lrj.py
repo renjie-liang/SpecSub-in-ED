@@ -4,6 +4,9 @@ import math
 import numpy as np
 import random
 import copy
+
+from utils.option import args
+from tqdm import tqdm
 class SpecSubED():
     def __init__(self,decrypt_cloud: PlaintextCloud, 
                 inc = 160,
@@ -54,8 +57,7 @@ class SpecSubED():
         sptrIm = [[]] * self.Num_w
         window = self.get_hamming_window(self.wlen)     #  Q int
 
-
-        for index_w in range(self.Num_w):
+        for index_w in tqdm(range(self.Num_w),desc = "Process 1 enframed and windowed"):
             temp = [0] * self.wlen
             for j in range(self.wlen):
                 temp[j] = signal_in[index_w *self.inc + j] * window[j] # Q^2
@@ -63,7 +65,6 @@ class SpecSubED():
             re, im = self.DFT(temp) # Q^3 
             sptrRe[index_w] = re
             sptrIm[index_w] = im
-            print('Process 1 enframed windowed: {}|{}'.format(index_w,self.Num_w -1))
 
         return sptrRe, sptrIm # Q^3
 
@@ -73,21 +74,19 @@ class SpecSubED():
         amp_avg = [0] * self.wlen   # Q^6
         amp = []
 
-        for i in range(self.Num_w):
+        for i in tqdm(range(self.Num_w),desc = "Process 21 get amplitude"):
             amp_row = []
             for j in range(self.wlen):
                 x = self.mul(sptrRe[i][j], sptrRe[i][j]) # Q^6
                 y = self.mul(sptrIm[i][j], sptrIm[i][j]) # Q^6
                 amp_row.append(x + y)
             amp.append(amp_row)
-            print('Process 21 amplitude: {}|{}'.format(i,self.Num_w -1))
 
-        for i in range(self.wlen):
+        for i in tqdm(range(self.wlen),desc = "Process 22 avg amplitude"):
             for j in range(self.NIS):
                 amp_avg[i] = amp_avg[i] + amp[j][i] #  NIS * Q^6
-            print('Process 22 avg amplitude: {}|{}'.format(i,self.wlen -1))
 
-        for i in range(self.wlen):
+        for i in tqdm(range(self.wlen),desc = "Process 23 remove nosie"):
             A_amp = self.A * amp_avg[i] # int * EncryptedNumber # NIS * Q^7
             B_amp = self.B * amp_avg[i] # NIS * Q^7
 
@@ -105,19 +104,17 @@ class SpecSubED():
                 # print('x mul 15 = ', self.pvk.decrypt(sptrRe[j][i])/(self.NIS **0.5 * self.Q ** 15))
                 # input()
                 sptrIm[j][i] = self.mul(sptrIm[j][i], x) # NIS^0.5 * Q^15
-            print('Process 23 remove nosie: {}|{}'.format(i,self.wlen -1))
         return sptrRe, sptrIm
 
         
 
     def overlap_add(self, sptrRe, sptrIm): # NIS^0.5 * Q^15
-        outSignal = [0] * self.Len_message 
+        outSignal = [pbk.encrypt(0)] * self.Len_message 
 
-        for i in range(self.Num_w):
+        for i in tqdm(range(self.Num_w),desc = "Process 3 overlap add"):
             _, re = self.DFT(sptrIm[i], sptrRe[i])
             for j in range(self.wlen):
                 outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + re[j]
-            print('Process 3 overlap add: {}|{}'.format(i,self.Num_w -1))
 
         return outSignal
         
@@ -192,33 +189,42 @@ class SpecSubED():
 # hjm test git
 
 if __name__=='__main__':
-    q=2**32
+
+
     ft=SpecSubED(PlaintextCloud(('127.0.0.1',9999)),
-                inc = 160,
-                window_len=400, 
-                a_in = 4,
-                b_in = 0.001,
-                NIS = 23,
-                quantizer=2**32) #
+                inc = args.inc,
+                window_len=args.wlen, 
+                a_in = args.a_in,
+                b_in = args.b_in,
+                NIS = args.NIS,
+                quantizer=args.quantizer) #
     pbk=ft.cloud.pbk
     pvk=ft.cloud.get_privatekey()
 
     sigin=[]
 
-    f = open('./data/shortinput.txt', 'r')
-    for index, l in enumerate(f):
-        sigin.append(pbk.encrypt(int(float(l)*q)))
-        print('Reading: {}|{}'.format(index,4000))
+    f = open(args.input, 'r')
+    for index, l in tqdm(enumerate(f),desc = "Reading: "):
+        sigin.append(pbk.encrypt(int(float(l)*args.quantizer)))
     f.close()
     #sigin # Q
     out=ft.spec_sub(sigin)
-    sigout=[pvk.decrypt(i) for i in out]
+
+
+    sigout=[float(pvk.decrypt(i)) for i in out]
+
+    for i in sigout:
+        print(i)
+        print(type(i))
+
+
     sigout=sigout-np.mean(sigout)
+
     sigout=sigout/max(abs(sigout))
-    f = open('./data/shortoutput.txt', 'wt')
-    for index,i in enumerate(sigout):
+
+    f = open(args.output, 'wt')
+    for i in tqdm(sigout,desc = 'Storing'):
         f.write(str(i)+'\n')
-        print('Storing: {}|{}'.format(index,4000))
     f.close()
     print("Done!")
 
