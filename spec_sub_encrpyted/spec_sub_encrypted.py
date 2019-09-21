@@ -6,6 +6,7 @@ import random
 import copy
 
 from utils.option import args
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 class SpecSubED():
     def __init__(self,decrypt_cloud: PlaintextCloud, 
@@ -45,7 +46,7 @@ class SpecSubED():
         self.Num_w=(self.Len_message - self.wlen) // self.inc + 1
 
         self.print_info()
-        sptrRe, sptrIm = self.enframed_windowed_dft(signal_in) # Q^3
+        sptrRe, sptrIm = self.enframed_windowed_dft(signal_in) # Q^3 
 
         sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm) # NIS^0.5 * Q^15
         outSignal = self.overlap_add(sptrRe,sptrIm)
@@ -55,7 +56,7 @@ class SpecSubED():
 
         sptrRe = [[]] * self.Num_w           # wlen * Num_w  
         sptrIm = [[]] * self.Num_w
-        window = self.get_hamming_window(self.wlen)     #  Q int
+        window = self.get_hamming_window(self.wlen)     #  Q int ###???
 
         for index_w in tqdm(range(self.Num_w),desc = "Process 1 enframed and windowed"):
             temp = [0] * self.wlen
@@ -112,7 +113,7 @@ class SpecSubED():
         outSignal = [pbk.encrypt(0)] * self.Len_message 
 
         for i in tqdm(range(self.Num_w),desc = "Process 3 overlap add"):
-            _, re = self.DFT(sptrIm[i], sptrRe[i])
+            _, re = self.DFT(sptrIm[i], sptrRe[i]) ###???
             for j in range(self.wlen):
                 outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + re[j]
 
@@ -153,13 +154,9 @@ class SpecSubED():
 
 
     def get_hamming_window(self, wlen):
-        win = []
-        p = (2 * math.pi) / (self.wlen - 1)
-        for i in range(wlen):
-            x = math.cos(p * i)
-            x = self.alpha_hamming * x + (1 - self.alpha_hamming)
-            x = int(x * self.Q)
-            win.append(x)
+
+        win = np.hamming(wlen)
+        win = list(map(int, win * self.Q))
         return win # 1 * wlen int Q
         
     def print_info(self):
@@ -185,6 +182,29 @@ class SpecSubED():
         print()
         
 
+def plot_signal(sigin, sigout):
+    if len(sigin) < 500:
+        plt.plot(sigin)
+        plt.plot(sigout)
+        plt.savefig('encrypt.png')
+        return
+    plt.plot(sigin)
+    plt.plot(sigout)
+    N = len(sigin) / 100
+    plt.grid()
+
+    plt.gca().margins(x=0)
+    plt.gcf().canvas.draw()
+    tl = plt.gca().get_xticklabels()
+    maxsize = max([t.get_window_extent().width for t in tl])
+    m = 0.2 # inch margin
+    s = maxsize/plt.gcf().dpi*N+2*m
+    margin = m/plt.gcf().get_size_inches()[0]
+
+    plt.gcf().subplots_adjust(left=margin, right=1.-margin)
+    plt.gcf().set_size_inches(s, plt.gcf().get_size_inches()[1])
+
+    plt.savefig('encrypt.png')
 
 # hjm test git
 
@@ -217,6 +237,15 @@ if __name__=='__main__':
     sigout=sigout-np.mean(sigout)
 
     sigout=sigout/max(abs(sigout))
+
+    sigin=[]
+
+    f = open(args.input, 'r')
+    for  l in tqdm(f,desc = "Reading: "):
+        sigin.append(float(l))
+    f.close()
+
+    plot_signal(sigin, sigout)
 
     f = open(args.output, 'wt')
     for i in tqdm(sigout,desc = 'Storing'):

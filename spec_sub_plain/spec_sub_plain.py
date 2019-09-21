@@ -5,6 +5,7 @@ import copy
 
 from utils.option import args
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 class SpecSub_plain():
     def __init__(self, inc = 160,
                 window_len=400, 
@@ -30,10 +31,11 @@ class SpecSub_plain():
 
         # self.print_info()
         sptrRe, sptrIm = self.enframed_windowed_dft(signal_in) # Q^3
+        
+        sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm) # NIS^0.5 * Q^15
 
-        # sptrRe, sptrIm = self.sptr_sub(sptrRe,sptrIm) # NIS^0.5 * Q^15
-        # outSignal = self.overlap_add(sptrRe,sptrIm)
-        # return outSignal
+        outSignal = self.overlap_add(sptrRe,sptrIm)
+        return outSignal
 
     def enframed_windowed_dft(self, signal_in):
 
@@ -46,122 +48,92 @@ class SpecSub_plain():
             for j in range(self.wlen):
                 temp[j] = signal_in[index_w *self.inc + j] * window[j] # Q^2
 
-            re = np.fft.fft(temp) # Q^3
-            print(re.real)
-            input()
-            sptrRe[index_w] = re
-            sptrIm[index_w] = im
+            fft_out = np.fft.fft(temp) # Q^3
+            re, im = fft_out.real, fft_out.imag
+
+            sptrRe.append(re)
+            sptrIm.append(im)
 
         return sptrRe, sptrIm # Q^3
 
-# np.fft.fft(y) 
 
-        # def sptr_sub(self, sptrRe, sptrIm):
-        #     amp_avg = [0] * self.wlen   # Q^6
-        #     amp = []
+    def sptr_sub(self, sptrRe, sptrIm):
+        amp_avg = [0] * self.wlen   # Q^6
+        amp = []
 
-        #     for i in tqdm(range(self.Num_w),desc = "Process 21 get amplitude"):
-        #         amp_row = []
-        #         for j in range(self.wlen):
-        #             x = self.mul(sptrRe[i][j], sptrRe[i][j]) # Q^6
-        #             y = self.mul(sptrIm[i][j], sptrIm[i][j]) # Q^6
-        #             amp_row.append(x + y)
-        #         amp.append(amp_row)
+        for i in tqdm(range(self.Num_w),desc = "Process 21 get amplitude"):
+            amp_row = []
+            for j in range(self.wlen):
+                x = sptrRe[i][j] * sptrRe[i][j]# Q^6
+                y = sptrIm[i][j] *  sptrIm[i][j] # Q^6
 
-        #     for i in tqdm(range(self.wlen),desc = "Process 22 avg amplitude"):
-        #         for j in range(self.NIS):
-        #             amp_avg[i] = amp_avg[i] + amp[j][i] #  NIS * Q^6
+                amp_row.append(x + y)
+            amp.append(amp_row)
 
-        #     for i in tqdm(range(self.wlen),desc = "Process 23 remove nosie"):
-        #         A_amp = self.A * amp_avg[i] # int * EncryptedNumber # NIS * Q^7
-        #         B_amp = self.B * amp_avg[i] # NIS * Q^7
+        for i in tqdm(range(self.wlen),desc = "Process 22 avg amplitude"):
+            for j in range(self.NIS):
+                amp_avg[i] = amp_avg[i] + amp[j][i] #  NIS * Q^6
 
-        #         for j in range(self.Num_w):
-                    
-        #             x = self.NIS * self.Q * amp[j][i] - A_amp # NIS * Q * Q^6 - NIS * Q^7 = NIS * Q^7
-        #             x = self.big(x, B_amp)
+        for i in tqdm(range(self.wlen),desc = "Process 23 remove nosie"):
+            A_amp = self.A * amp_avg[i] # int * EncryptedNumber # NIS * Q^7
+            B_amp = self.B * amp_avg[i] # NIS * Q^7
 
-        #             x = self.div(x, amp[j][i], self.Q ** 7) # (NIS * Q^7) / Q^6 * Q^7 = NIS * Q^8
-        #             # print('x div = ', self.pvk.decrypt(x)/(self.NIS * self.Q ** 8))
-        #             x = self.sqrt(x, self.Q ** 5) #  NIS^0.5 * Q^9
-        #             # print('x sqrt = ', self.pvk.decrypt(x)/(self.NIS ** 0.5 * self.Q ** 9))
+            for j in range(self.Num_w):
+                 
+                x = self.NIS  * amp[j][i] - A_amp # NIS * Q * Q^6 - NIS * Q^7 = NIS * Q^7
+                x = max(x, B_amp)
 
-        #             sptrRe[j][i] = self.mul(sptrRe[j][i], x) # Q^6 * NIS^0.5 * Q^9 = NIS^0.5 * Q^15
-        #             # print('x mul 15 = ', self.pvk.decrypt(sptrRe[j][i])/(self.NIS **0.5 * self.Q ** 15))
-        #             # input()
-        #             sptrIm[j][i] = self.mul(sptrIm[j][i], x) # NIS^0.5 * Q^15
-        #     return sptrRe, sptrIm
+                x = x / amp[j][i] # (NIS * Q^7) / Q^6 * Q^7 = NIS * Q^8
+                # print('x div = ', self.pvk.decrypt(x)/(self.NIS * self.Q ** 8))
+                x = x ** 0.5 #  NIS^0.5 * Q^9
+                # print('x sqrt = ', self.pvk.decrypt(x)/(self.NIS ** 0.5 * self.Q ** 9))
+
+                sptrRe[j][i] = sptrRe[j][i] * x # Q^6 * NIS^0.5 * Q^9 = NIS^0.5 * Q^15
+                # print('x mul 15 = ', self.pvk.decrypt(sptrRe[j][i])/(self.NIS **0.5 * self.Q ** 15))
+                # input()
+                sptrIm[j][i] = sptrIm[j][i] * x # NIS^0.5 * Q^15
+        return sptrRe, sptrIm
 
             
 
-        # def overlap_add(self, sptrRe, sptrIm): # NIS^0.5 * Q^15
-        #     outSignal = [pbk.encrypt(0)] * self.Len_message 
+    def overlap_add(self, sptrRe, sptrIm): # NIS^0.5 * Q^15
+        outSignal = [0] * self.Len_message 
+        sptrRe = np.array(sptrRe)
+        sptrIm = np.array(sptrIm)
 
-        #     for i in tqdm(range(self.Num_w),desc = "Process 3 overlap add"):
-        #         _, re = self.DFT(sptrIm[i], sptrRe[i])
-        #         for j in range(self.wlen):
-        #             outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + re[j]
 
-        #     return outSignal
+        for i in tqdm(range(self.Num_w),desc = "Process 3 overlap add"):
+            out_ifft = np.fft.fft(sptrRe[i] * 1j + sptrIm[i] )
+            for j in range(self.wlen):
+                outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + out_ifft.imag[j]
+
+        return np.array(outSignal)
             
 
-        # def DFT(self, re_in, img_in = None):  # Q^2
-        #     len_s = len(re_in)
-        #     p = (-2 * math.pi) / len_s
+def plot_signal(sigin, sigout):
+    if len(sigin) < 500:
+        plt.plot(sigin)
+        plt.plot(sigout)
+        plt.savefig('plain.png')
+        return
 
-        #     aux_re, aux_im = [], [] # Q int
+    plt.plot(sigin)
+    plt.plot(sigout)
+    N = len(sigin) / 100
+    plt.grid()
 
-        #     for i in range(len_s):
-        #         row_re, row_im = [], []
-        #         for j in range(len_s):
-        #             x = int(math.cos(i * j * p) * self.Q)
-        #             y = int(math.sin(i * j * p) * self.Q)
-        #             row_re.append(x)
-        #             row_im.append(y)
-        #         aux_re.append(row_re)
-        #         aux_im.append(row_im) # Q
+    plt.gca().margins(x=0)
+    plt.gcf().canvas.draw()
+    tl = plt.gca().get_xticklabels()
+    maxsize = max([t.get_window_extent().width for t in tl])
+    m = 0.2 # inch margin
+    s = maxsize/plt.gcf().dpi*N+2*m
+    margin = m/plt.gcf().get_size_inches()[0]
 
-        #     re, im = [0] * len_s, [0] * len_s
-        #     for i in range(len_s):
-        #         for j in range(len_s):
-        #             x = re_in[j] * aux_re[i][j] # Q^3
-        #             re[i] = re[i] + x
-        #             y = re_in[j] * aux_im[i][j] 
-        #             im[i] = im[i] + y
-        #     if img_in:
-        #         for i in range(len_s):
-        #             for j in range(len_s):
-        #                 x = -1 * aux_re[i][j] * img_in[j] # QQ
-        #                 re[i] = re[i] + x
-        #                 y = -1 * aux_im[i][j] * img_in[j] # QQ
-        #                 im[i] = im[i] + y
-        #     return re, im # Q^3
+    plt.gcf().subplots_adjust(left=margin, right=1.-margin)
+    plt.gcf().set_size_inches(s, plt.gcf().get_size_inches()[1])
 
-
-        
-        # def print_info(self):
-        #     print()
-        #     print('-'*40)
-        #     print('Encrypted info:')
-        #     print('Q: ',self.Q)
-        #     print()
-
-        #     print('siginal info:')
-        #     print('Len_message:',self.Len_message)
-        #     print('inc: ',self.inc)
-        #     print('wlen: ',self.wlen)
-        #     print('Num_w: ',self.Num_w)
-        #     print()
-
-        #     print('spec sub infor')
-        #     print('A: ',self.A/self.Q)
-        #     print('B: ',self.B/self.Q)
-        #     print('NIS: ',self.NIS)
-        #     print('alpha_hamming: ',self.alpha_hamming)
-        #     print('-'*40)
-        #     print()
-            
-
+    plt.savefig('plain.png')
 
 # hjm test git
 
@@ -180,7 +152,6 @@ if __name__=='__main__':
         sigin.append(float(l))
     f.close()
     sigin = np.array(sigin)
-
     sigout=ft.spec_sub(sigin)
 
 
@@ -189,6 +160,7 @@ if __name__=='__main__':
     sigout=sigout-sigout.mean()
 
     sigout=sigout/max(abs(sigout))
+    plot_signal(sigin, sigout)
 
     f = open(args.output, 'wt')
     for i in tqdm(sigout,desc = 'Storing'):
