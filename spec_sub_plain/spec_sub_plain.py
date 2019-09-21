@@ -39,19 +39,20 @@ class SpecSub_plain():
 
         sptrRe = []         # wlen * Num_w  
         sptrIm = [] 
-        window = self.get_hamming_window(self.wlen)     #  Q int
-        print(window)
-        input()
-        # for index_w in tqdm(range(self.Num_w),desc = "Process 1 enframed and windowed"):
-        #     temp = [0] * self.wlen
-        #     for j in range(self.wlen):
-        #         temp[j] = signal_in[index_w *self.inc + j] * window[j] # Q^2
+        window = np.hamming(self.wlen)     #  Q int
 
-        #     re, im = np.fft.fft(temp) # Q^3 
-        #     sptrRe[index_w] = re
-        #     sptrIm[index_w] = im
+        for index_w in tqdm(range(self.Num_w),desc = "Process 1 enframed and windowed"):
+            temp = [0] * self.wlen
+            for j in range(self.wlen):
+                temp[j] = signal_in[index_w *self.inc + j] * window[j] # Q^2
 
-        # return sptrRe, sptrIm # Q^3
+            re = np.fft.fft(temp) # Q^3
+            print(re.real)
+            input()
+            sptrRe[index_w] = re
+            sptrIm[index_w] = im
+
+        return sptrRe, sptrIm # Q^3
 
 # np.fft.fft(y) 
 
@@ -137,15 +138,6 @@ class SpecSub_plain():
         #     return re, im # Q^3
 
 
-    def get_hamming_window(self, wlen):
-        win = []
-        p = (2 * math.pi) / (self.wlen - 1)
-        for i in range(wlen):
-            x = math.cos(p * i)
-            x = self.alpha_hamming * x + (1 - self.alpha_hamming)
-            x = x 
-            win.append(x)
-        return win # 1 * wlen int Q
         
         # def print_info(self):
         #     print()
