@@ -7,7 +7,7 @@ import copy
 
 from utils.option import args
 from tqdm import tqdm
-class SpecSubED():
+class SpecSub_plain():
     def __init__(self,decrypt_cloud: PlaintextCloud, 
                 inc = 160,
                 window_len=400, 
@@ -191,7 +191,7 @@ class SpecSubED():
 if __name__=='__main__':
 
 
-    ft=SpecSubED(PlaintextCloud(('127.0.0.1',9999)),
+    ft=SpecSub_plain(,
                 inc = args.inc,
                 window_len=args.wlen, 
                 a_in = args.a_in,
@@ -212,10 +212,6 @@ if __name__=='__main__':
 
 
     sigout=[float(pvk.decrypt(i)) for i in out]
-
-    for i in sigout:
-        print(i)
-        print(type(i))
 
 
     sigout=sigout-np.mean(sigout)
