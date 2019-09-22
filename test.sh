@@ -8,4 +8,4 @@ python3 run.py \
 	--inc 2 \
 	--wlen 4 \
 	--NIS 2 \
-
+	--debug
