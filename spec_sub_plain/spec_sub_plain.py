@@ -54,6 +54,7 @@ class SpecSub_plain():
             sptrRe.append(re)
             sptrIm.append(im)
 
+
         return sptrRe, sptrIm # Q^3
 
 
@@ -70,13 +71,18 @@ class SpecSub_plain():
                 amp_row.append(x + y)
             amp.append(amp_row)
 
+
+
+
         for i in tqdm(range(self.wlen),desc = "Process 22 avg amplitude"):
             for j in range(self.NIS):
                 amp_avg[i] = amp_avg[i] + amp[j][i] #  NIS * Q^6
 
+
         for i in tqdm(range(self.wlen),desc = "Process 23 remove nosie"):
             A_amp = self.A * amp_avg[i] # int * EncryptedNumber # NIS * Q^7
             B_amp = self.B * amp_avg[i] # NIS * Q^7
+
 
             for j in range(self.Num_w):
                  
@@ -88,25 +94,37 @@ class SpecSub_plain():
                 x = x ** 0.5 #  NIS^0.5 * Q^9
                 # print('x sqrt = ', self.pvk.decrypt(x)/(self.NIS ** 0.5 * self.Q ** 9))
 
-                sptrRe[j][i] = sptrRe[j][i] * x # Q^6 * NIS^0.5 * Q^9 = NIS^0.5 * Q^15
+                sptrRe[j][i] = sptrRe[j][i] * x # Q^3 * NIS^0.5 * Q^9 = NIS^0.5 * Q^12
                 # print('x mul 15 = ', self.pvk.decrypt(sptrRe[j][i])/(self.NIS **0.5 * self.Q ** 15))
                 # input()
                 sptrIm[j][i] = sptrIm[j][i] * x # NIS^0.5 * Q^15
+
+
+
         return sptrRe, sptrIm
 
             
 
     def overlap_add(self, sptrRe, sptrIm): # NIS^0.5 * Q^15
+
+
+
         outSignal = [0] * self.Len_message 
         sptrRe = np.array(sptrRe)
         sptrIm = np.array(sptrIm)
 
 
         for i in tqdm(range(self.Num_w),desc = "Process 3 overlap add"):
-            out_ifft = np.fft.fft(sptrRe[i] * 1j + sptrIm[i] )
+            out_ifft = np.fft.fft(sptrIm[i] + sptrRe[i] * 1j )
+
+
+            print('real:',out_ifft.real)
+            print('imag:',out_ifft.imag)
+            input()
+
+
             for j in range(self.wlen):
                 outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + out_ifft.imag[j]
-
         return np.array(outSignal)
             
 

@@ -72,6 +72,10 @@ class SpecSubED():
 
 
     def sptr_sub(self, sptrRe, sptrIm):
+
+
+
+
         amp_avg = [0] * self.wlen   # Q^6
         amp = []
 
@@ -83,9 +87,15 @@ class SpecSubED():
                 amp_row.append(x + y)
             amp.append(amp_row)
 
+
+
+
+
         for i in tqdm(range(self.wlen),desc = "Process 22 avg amplitude"):
             for j in range(self.NIS):
                 amp_avg[i] = amp_avg[i] + amp[j][i] #  NIS * Q^6
+
+
 
         for i in tqdm(range(self.wlen),desc = "Process 23 remove nosie"):
             A_amp = self.A * amp_avg[i] # int * EncryptedNumber # NIS * Q^7
@@ -96,26 +106,39 @@ class SpecSubED():
                 x = self.NIS * self.Q * amp[j][i] - A_amp # NIS * Q * Q^6 - NIS * Q^7 = NIS * Q^7
                 x = self.big(x, B_amp)
 
+
+
                 x = self.div(x, amp[j][i], self.Q ** 7) # (NIS * Q^7) / Q^6 * Q^7 = NIS * Q^8
                 # print('x div = ', self.pvk.decrypt(x)/(self.NIS * self.Q ** 8))
                 x = self.sqrt(x, self.Q ** 5) #  NIS^0.5 * Q^9
                 # print('x sqrt = ', self.pvk.decrypt(x)/(self.NIS ** 0.5 * self.Q ** 9))
 
-                sptrRe[j][i] = self.mul(sptrRe[j][i], x) # Q^6 * NIS^0.5 * Q^9 = NIS^0.5 * Q^15
-                # print('x mul 15 = ', self.pvk.decrypt(sptrRe[j][i])/(self.NIS **0.5 * self.Q ** 15))
+
+                sptrRe[j][i] = self.mul(sptrRe[j][i], x) # Q^3 * NIS^0.5 * Q^9 = NIS^0.5 * Q^12
+                # print('x mul 15 = ', self.pvk.decrypt(sptrRe[j][i])/(self.NIS **0.5 * self.Q ** 12))
                 # input()
                 sptrIm[j][i] = self.mul(sptrIm[j][i], x) # NIS^0.5 * Q^15
+
+
+
+
+        
+
         return sptrRe, sptrIm
 
         
 
     def overlap_add(self, sptrRe, sptrIm): # NIS^0.5 * Q^15
+
         outSignal = [pbk.encrypt(0)] * self.Len_message 
 
         for i in tqdm(range(self.Num_w),desc = "Process 3 overlap add"):
-            _, re = self.DFT(sptrIm[i], sptrRe[i]) ###???
+
+            re, im = self.DFT(sptrIm[i], sptrRe[i]) ###???
+
             for j in range(self.wlen):
-                outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + re[j]
+                outSignal[i * self.inc + j] = outSignal[i * self.inc + j] + im[j]
+
 
         return outSignal
         
@@ -143,12 +166,14 @@ class SpecSubED():
                 re[i] = re[i] + x
                 y = re_in[j] * aux_im[i][j] 
                 im[i] = im[i] + y
+
+
         if img_in:
             for i in range(len_s):
                 for j in range(len_s):
-                    x = -1 * aux_re[i][j] * img_in[j] # QQ
+                    x = -1 * aux_im[i][j] * img_in[j] # QQ
                     re[i] = re[i] + x
-                    y = -1 * aux_im[i][j] * img_in[j] # QQ
+                    y =     aux_re[i][j] * img_in[j] # QQ
                     im[i] = im[i] + y
         return re, im # Q^3
 
@@ -165,7 +190,7 @@ class SpecSubED():
         print('Encrypted info:')
         print('Q: ',self.Q)
         print()
-
+        
         print('siginal info:')
         print('Len_message:',self.Len_message)
         print('inc: ',self.inc)
