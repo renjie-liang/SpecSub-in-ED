@@ -48,6 +48,10 @@ for index_f, file in enumerate(file_list):
     with open(file, 'r') as f:
         for  l in tqdm(f,desc = "Reading: "):
             sigin.append(float(l))
+
+    # add noise
+
+
     print('Plain:')
     sigout_plain=specsub_plain.spec_sub(sigin)
 
@@ -58,7 +62,7 @@ for index_f, file in enumerate(file_list):
 
     sigout_encrypted=specsub_encrypted.spec_sub(sigin_en)
 
-
+    # sigout_encrypted = sigout_plain
     if args.debug:
         continue
     names = get_img_namedir(file, run_dir, args)

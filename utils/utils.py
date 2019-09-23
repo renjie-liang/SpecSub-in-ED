@@ -28,14 +28,17 @@ def get_img_namedir(file_name, run_dir, args):
     output_name = os.path.join(run_dir, 'output'+args.noise_db+'dB')
     img_name = os.path.join(run_dir, 'images'+args.noise_db+'dB')
 
-    output_name =  os.path.join(output_name, wav_name+'.txt')
+    output_name =  os.path.join(output_name, wav_name+'.wav')
     img_name =  os.path.join(img_name, wav_name+'.png')
     return [output_name, img_name]
 
 def save_plot(sigin, sigout_plain, sigout_encrypted, names_list):
     output_name, img_name = names_list
     plot_signal(sigin, sigout_plain, sigout_encrypted, img_name)
+    save_wave(sigin, sigout_plain, sigout_encrypted, output_name)
 
+def save_wave(sigin, sigout_plain, sigout_encrypted, output_name):
+    pass
 
 def plot_signal(sigin, sigout_plain, sigout_encrypted, img_name):
 
