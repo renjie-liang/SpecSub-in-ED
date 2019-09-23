@@ -41,7 +41,7 @@ pvk=specsub_encrypted.cloud.get_privatekey()
 
 
 for index_f, file in enumerate(file_list):
-    print('\nWav:{}|{}'.format(index_f,len(file_list)))
+    print('\nWav:{}|{}'.format(index_f,len(file_list)-1))
 
 
     sigin = []
@@ -51,9 +51,11 @@ for index_f, file in enumerate(file_list):
     print('Plain:')
     sigout_plain=specsub_plain.spec_sub(sigin)
 
-
+    sigin_en = []
     print('Encrypted:')
-    sigin_en = [pbk.encrypt(int(i*args.quantizer)) for i in sigin ]
+    for i in tqdm(sigin, desc = 'trans data'):
+        sigin_en.append(pbk.encrypt(int(i*args.quantizer)))
+
     sigout_encrypted=specsub_encrypted.spec_sub(sigin_en)
 
 
