@@ -51,14 +51,14 @@ for index_f, file in enumerate(file_list):
     print('Plain:')
     sigout_plain=specsub_plain.spec_sub(sigin)
 
-    sigin_en = []
-    print('Encrypted:')
-    for i in tqdm(sigin, desc = 'trans data'):
-        sigin_en.append(pbk.encrypt(int(i*args.quantizer)))
+    # sigin_en = []
+    # print('Encrypted:')
+    # for i in tqdm(sigin, desc = 'trans data'):
+    #     sigin_en.append(pbk.encrypt(int(i*args.quantizer)))
 
-    sigout_encrypted=specsub_encrypted.spec_sub(sigin_en)
+    # sigout_encrypted=specsub_encrypted.spec_sub(sigin_en)
 
-
+    sigout_encrypted = sigout_plain
     if args.debug:
         continue
     names = get_img_namedir(file, run_dir, args)

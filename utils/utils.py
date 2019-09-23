@@ -39,22 +39,23 @@ def save_plot(sigin, sigout_plain, sigout_encrypted, names_list):
 
 def plot_signal(sigin, sigout_plain, sigout_encrypted, img_name):
 
+    colors = ['r','g','b']
     ls = [sigin, sigout_plain, sigout_encrypted]
     N = len(sigin)
 
     for i in range(3):
         
         plt.subplot(3,1, i+1)
-        plt.plot(ls[i])
+        plt.plot(ls[i], linewidth=0.5, color = colors[i])
 
         plt.grid()
 
         plt.gca().margins(x=0)
 
         # plt.gcf().subplots_adjust(left=0.03, right=1.-0.03)
-        plt.gcf().set_size_inches(N/30, plt.gcf().get_size_inches()[1])
+        plt.gcf().set_size_inches(N/200, plt.gcf().get_size_inches()[1])
 
-    plt.savefig(img_name)
+    plt.savefig(img_name,dpi = 600)
 
 
 
