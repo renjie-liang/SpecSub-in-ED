@@ -53,7 +53,7 @@ def plot_signal(sigin, sigout_plain, sigout_encrypted, img_name):
         plt.gca().margins(x=0)
 
         # plt.gcf().subplots_adjust(left=0.03, right=1.-0.03)
-        plt.gcf().set_size_inches(N/200, plt.gcf().get_size_inches()[1])
+        plt.gcf().set_size_inches(N/100, plt.gcf().get_size_inches()[1])
 
     plt.savefig(img_name,dpi = 600)
 
