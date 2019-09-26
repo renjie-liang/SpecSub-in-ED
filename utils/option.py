@@ -5,7 +5,7 @@ parser = argparse.ArgumentParser(description='Spectral Subtraction')
 
 parser.add_argument('--name', required=True,
                     help='The name of expriment')
-parser.add_argument('--noise_db', required=True,
+parser.add_argument('--noise_db', required=True,type=int,
                     help='The noise_db')
 parser.add_argument('--input_dir', required=True,
                     help='The input signal')
