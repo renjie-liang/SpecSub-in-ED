@@ -1,10 +1,13 @@
+import sys
+sys.path.append("..")
+
 from model.spec_sub_plain import *
 from scipy.io import wavfile
 import glob
 import utils.utils
 import numpy as np
 
-file=glob.glob('data/short/*')
+file=glob.glob('data/*')
 file = file[0]
 
 fq,sigin=wavfile.read(file)
