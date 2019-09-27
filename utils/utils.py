@@ -48,7 +48,7 @@ def save_rslt(sigin_list, name_list, save_name_list):
 
     output_name, noise_name, img_name = save_name_list
     plot_signal(sigin_list, name_list, img_name ,len_plot = 20000, scale = 1000)
-
+    wav_save(sigin_list,save_name_list)
 
     f=open(noise_name,'wt')
     for ns in noise:
@@ -57,7 +57,8 @@ def save_rslt(sigin_list, name_list, save_name_list):
 
     wavfile.write(output_name,16000,sigout_encrypted)
 
-
+def wav_save(sigin_list,save_name_list):
+	pass
 
 
 def plot_signal(sigin_list, name_list,  img_name, len_plot = 1000, scale = 50):
